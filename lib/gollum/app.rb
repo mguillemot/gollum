@@ -75,6 +75,12 @@ module Precious
       :views => "#{dir}/views"
     }
 
+    # Requires the user to be authenticated (in gollum.author) in order to commit changes to the wiki repo?
+    #  - nil (default) - any one can commit
+    #  - true          - gollum will respond with a "403 Forbidden" when trying to perform an unauthorized operation
+    #  - String        - gollum will redirect to this URL when trying to perform an unauthorized operation
+    set :write_auth, nil
+
     # Sinatra error handling
     configure :development, :staging do
       enable :show_exceptions, :dump_errors
@@ -119,6 +125,21 @@ module Precious
       Gollum::Wiki.new(settings.gollum_path, settings.wiki_options)
     end
 
+    def check_write_access!
+      if settings.write_auth != nil && session['gollum.author'] == nil
+
+        puts session['gollum.author'].inspect
+        raise "WOW???"
+
+        if settings.write_auth.is_a? String
+          url = settings.write_auth.gsub('%r', encodeURIComponent(request.url))
+          redirect(url)
+        else
+          halt 403
+        end
+      end
+    end
+
     get '/data/*' do
       if page = wiki_page(params[:splat].first).page
         page.raw_data
@@ -126,6 +147,8 @@ module Precious
     end
 
     get '/edit/*' do
+      check_write_access!
+
       wikip = wiki_page(params[:splat].first)
       @name = wikip.name
       @path = wikip.path
@@ -157,6 +180,8 @@ module Precious
         mustache :error
         return
       end
+
+      check_write_access!
 
       if params[:file]
         fullname = params[:file][:filename]
@@ -197,6 +222,8 @@ module Precious
     end
 
     post '/rename/*' do
+      check_write_access!
+
       wikip     = wiki_page(params[:splat].first)
       halt 500 if wikip.nil?
       wiki      = wikip.wiki
@@ -233,6 +260,8 @@ module Precious
     end
 
     post '/edit/*' do
+      check_write_access!
+
       path      = '/' + clean_url(sanitize_empty_params(params[:path])).to_s
       page_name = CGI.unescape(params[:page])
       wiki      = wiki_new
@@ -251,6 +280,8 @@ module Precious
     end
 
     get '/delete/*' do
+      check_write_access!
+
       wikip = wiki_page(params[:splat].first)
       name = wikip.name
       wiki = wikip.wiki
@@ -261,6 +292,8 @@ module Precious
     end
 
     get '/create/*' do
+      check_write_access!
+
       wikip = wiki_page(params[:splat].first.gsub('+', '-'))
       @name = wikip.name.to_url
       @path = wikip.path
@@ -284,6 +317,8 @@ module Precious
     end
 
     post '/create' do
+      check_write_access!
+
       name         = params[:page].to_url
       path         = sanitize_empty_params(params[:path]) || ''
       format       = params[:format].intern
@@ -301,6 +336,8 @@ module Precious
     end
 
     post '/revert/:page/*' do
+      check_write_access!
+
       wikip        = wiki_page(params[:page])
       @path        = wikip.path
       @name        = wikip.name
@@ -325,6 +362,8 @@ module Precious
     end
 
     post '/preview' do
+      check_write_access!
+
       wiki     = wiki_new
       @name    = params[:page] || "Preview"
       @page    = wiki.preview_page(@name, params[:content], params[:format])
