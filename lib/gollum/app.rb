@@ -87,6 +87,10 @@ module Precious
       disable :raise_errors, :clean_trace
     end
 
+    configure :production do
+      enable :logging
+    end
+
     configure :test do
       enable :logging, :raise_errors, :dump_errors
     end
