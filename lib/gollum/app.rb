@@ -131,11 +131,7 @@ module Precious
 
     def check_write_access!
       if settings.write_auth != nil && session['gollum.author'] == nil
-
-        puts session['gollum.author'].inspect
-        raise "WOW???"
-
-        if settings.write_auth.is_a? String
+        if String === settings.write_auth
           url = settings.write_auth.gsub('%r', encodeURIComponent(request.url))
           redirect(url)
         else
